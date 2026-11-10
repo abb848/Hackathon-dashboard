@@ -40,7 +40,7 @@ python dashboard.py
 
 Open http://localhost:8080 and press F11 for full screen. The terminal also prints an address for other devices on the same network. Stop with Ctrl+C.
 
-The dashboard checks GitHub every 60 seconds. If GitHub can't be reached it keeps the last numbers and recovers by itself.
+The dashboard checks GitHub every 20 seconds (`POLL_SECONDS`). If GitHub can't be reached it keeps the last numbers and recovers by itself.
 
 ### Effects
 

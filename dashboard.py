@@ -39,7 +39,7 @@ START_TIME = "2026-11-19T09:00:00+01:00"  # PRs created before this are ignored
 ORGS = ["home-assistant"]
 EVENT_LOCATION = "THE HAGUE"
 MILESTONES = [10, 25, 50, 100]
-POLL_SECONDS = 60
+POLL_SECONDS = 20  # each check is one GitHub search per 100 PRs; the limit is 30 searches a minute
 PORT = 8080
 
 DEMO_MODE = False  # True: plain "python dashboard.py" runs the demo instead of live
