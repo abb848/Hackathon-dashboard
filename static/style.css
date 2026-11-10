@@ -41,7 +41,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: #000; }
 #bg-world { position: absolute; left: 0; top: 0; will-change: transform; }
 #bg-world canvas { position: absolute; display: block; }
 .confetto { position: absolute; top: -40px; border-radius: 2px; will-change: transform, opacity; }
-.ripple { position: absolute; will-change: opacity; }
+.ripple { position: absolute; opacity: 0; will-change: opacity; }
 
 /* ---------- Overlays on top of everything: pulse lines and edge glow ---------- */
 .overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -49,7 +49,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: #000; }
 .pulse-glow { fill: none; stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; opacity: 0.35; }
 .pulse-head { fill: none; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
 .pulse-spark { transform-box: fill-box; transform-origin: center; }
-.shock { position: absolute; will-change: transform, opacity; }
+.shock { position: absolute; opacity: 0; will-change: transform, opacity; }
 .num.kick { animation: num-kick 0.7s cubic-bezier(0.3, 1.6, 0.5, 1); }
 .num-main.kick { transform-origin: left center; }
 .num-merged.kick { transform-origin: right center; }

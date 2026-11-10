@@ -42,6 +42,16 @@ Open http://localhost:8080 and press F11 for full screen. The terminal also prin
 
 The dashboard checks GitHub every 60 seconds. If GitHub can't be reached it keeps the last numbers and recovers by itself.
 
+### Effects
+
+By default the dashboard runs in a lighter mode made for the Pi: the hexagon ripples and shockwave rings are off, everything else plays. To turn them on, open it with `?full`:
+
+```
+http://localhost:8080/?full
+```
+
+On the Pi 5 the full effects made the page drop out when a PR landed, so only use `?full` on a faster machine (or once it's been tested on the Pi).
+
 ### Demo and replay
 
 ```

@@ -13,8 +13,8 @@ const FEED_MS = 350;
 const BLUE = { line: '#4fc3f7', head: '#e1f5fe', light: 'rgba(79,195,247,0.32)' };
 const PURPLE = { line: '#a371f7', head: '#f1e8ff', light: 'rgba(163,113,247,0.32)' };
 const SVG_NS = 'http://www.w3.org/2000/svg';
-// Open the page with ?lite to turn off the heaviest effects (ripples and shockwaves) on slow machines
-const LITE = new URLSearchParams(location.search).has('lite');
+// Ripples and shockwaves are too heavy for the Pi, so they only run when the page is opened with ?full
+const LITE = !new URLSearchParams(location.search).has('full');
 // Primer octicon git-merge-16 (MIT)
 const MERGE_ICON = 'M5.45 5.154A4.25 4.25 0 0 0 9.25 7.5h1.378a2.251 2.251 0 1 1 0 1.5H9.25A5.734 5.734 0 0 1 5 7.123v3.505a2.25 2.25 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.95-.218ZM4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm8.5-4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM5 3.25a.75.75 0 1 0 0 .005V3.25Z';
 
@@ -287,6 +287,8 @@ class HexBackground {
     this.colStep = 1.5 * this.r;
     this.seed = Math.floor(Math.random() * 2 ** 31);
     this.chunks = new Map();
+    this.rippleSets = {};
+    this.rippleRadius = 300;
     this.x = Math.random() * 100000;
     this.y = Math.random() * 100000;
     this.angle = Math.floor(Math.random() * 8) * (Math.PI / 4);
@@ -329,41 +331,58 @@ class HexBackground {
   }
 
   // Hexagons around a point (in 1920x1080 frame coordinates) light up in a wave.
-  // Drawn once into a few rings, then only faded, so the Pi doesn't redraw it every frame.
+  // The rings are drawn once per colour and reused, so nothing new is created mid-animation.
   ripple(fx, fy, colour, delay) {
     if (LITE) return;
-    const R = 300;
+    const R = this.rippleRadius;
+    const set = this.rippleSet(colour);
+    // Snap to an even hex column so the pre-drawn hexagons line up with the grid
+    const cx = Math.round((fx + this.x) / (2 * this.colStep)) * 2 * this.colStep;
+    const cy = Math.round((fy + this.y) / this.rowStep) * this.rowStep;
+    set.canvases.forEach((canvas, b) => {
+      canvas.style.left = `${cx - R}px`;
+      canvas.style.top = `${cy - R}px`;
+      canvas.getAnimations().forEach((a) => a.cancel());
+      canvas.animate(
+        [{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 0 }],
+        { duration: 1100, delay: delay + b * 160, easing: 'ease-out', fill: 'both' },
+      );
+    });
+  }
+
+  rippleSet(colour) {
+    const existing = this.rippleSets[colour];
+    if (existing && existing.ps === this.pixelScale) return existing;
+    if (existing) existing.canvases.forEach((c) => c.remove());
+    const R = this.rippleRadius;
     const BANDS = 3;
-    const wx = fx + this.x;
-    const wy = fy + this.y;
-    const rings = [];
+    const canvases = [];
+    const contexts = [];
     for (let b = 0; b < BANDS; b++) {
       const canvas = document.createElement('canvas');
       canvas.className = 'ripple';
       canvas.width = canvas.height = Math.ceil(2 * R * this.pixelScale);
       canvas.style.width = canvas.style.height = `${2 * R}px`;
-      canvas.style.left = `${wx - R}px`;
-      canvas.style.top = `${wy - R}px`;
       const ctx = canvas.getContext('2d');
       ctx.scale(this.pixelScale, this.pixelScale);
-      ctx.translate(R - wx, R - wy);
+      ctx.translate(R, R);
       ctx.fillStyle = colour;
       ctx.strokeStyle = colour;
       ctx.lineWidth = 1.5;
-      rings.push({ canvas, ctx });
+      canvases.push(canvas);
+      contexts.push(ctx);
     }
-    const c0 = Math.floor((wx - R) / this.colStep);
-    const c1 = Math.ceil((wx + R) / this.colStep);
-    for (let c = c0; c <= c1; c++) {
+    // Centred on a hex in an even column, so odd columns are shifted down half a row
+    const span = Math.ceil(R / this.colStep);
+    for (let c = -span; c <= span; c++) {
       const cx = c * this.colStep;
       const offset = (c & 1) ? this.rowStep / 2 : 0;
-      const r0 = Math.floor((wy - R - offset) / this.rowStep);
-      const r1 = Math.ceil((wy + R - offset) / this.rowStep);
-      for (let row = r0; row <= r1; row++) {
+      const rows = Math.ceil(R / this.rowStep) + 1;
+      for (let row = -rows; row <= rows; row++) {
         const cy = row * this.rowStep + offset;
-        const dist = Math.hypot(cx - wx, cy - wy);
+        const dist = Math.hypot(cx, cy);
         if (dist > R) continue;
-        const { ctx } = rings[Math.min(BANDS - 1, Math.floor(dist / (R / BANDS)))];
+        const ctx = contexts[Math.min(BANDS - 1, Math.floor(dist / (R / BANDS)))];
         const strength = 1 - dist / R;
         ctx.beginPath();
         this.hexPath(ctx, cx, cy, this.r - 2);
@@ -373,14 +392,9 @@ class HexBackground {
         ctx.stroke();
       }
     }
-    rings.forEach(({ canvas }, b) => {
-      this.world.append(canvas);
-      canvas.animate(
-        [{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 0 }],
-        { duration: 1100, delay: delay + b * 160, easing: 'ease-out', fill: 'both' },
-      );
-    });
-    setTimeout(() => rings.forEach(({ canvas }) => canvas.remove()), delay + BANDS * 160 + 1200);
+    canvases.forEach((c) => this.world.append(c));
+    this.rippleSets[colour] = { ps: this.pixelScale, canvases };
+    return this.rippleSets[colour];
   }
 
   drawChunk(i, j) {
@@ -596,11 +610,16 @@ function pulse(points, colour, delay, duration = PULSE_MS, withLight = true) {
   setTimeout(() => light.remove(), delay + duration + 1000);
 }
 
-// Expanding hexagon rings from a point, like a shockwave. Drawn once, then only scaled and faded.
-function shockwave(x, y, colour, size, delay) {
-  if (LITE) return;
+// Expanding hexagon rings from a point, like a shockwave. The rings are drawn once and reused.
+const shockSets = {};
+
+function shockSet(colour, size) {
   const ps = frameScale * (window.devicePixelRatio || 1);
-  for (const [extra, width] of [[0, 4], [160, 2]]) {
+  const key = `${colour}/${size}`;
+  const existing = shockSets[key];
+  if (existing && existing.ps === ps) return existing;
+  if (existing) existing.rings.forEach((r) => r.remove());
+  const rings = [4, 2].map((width) => {
     const ring = document.createElement('canvas');
     ring.className = 'shock';
     ring.width = ring.height = Math.ceil(size * ps);
@@ -619,15 +638,24 @@ function shockwave(x, y, colour, size, delay) {
       ctx.stroke();
     }
     $('lights').append(ring);
+    return ring;
+  });
+  shockSets[key] = { ps, rings };
+  return shockSets[key];
+}
+
+function shockwave(x, y, colour, size, delay) {
+  if (LITE) return;
+  shockSet(colour, size).rings.forEach((ring, i) => {
+    ring.getAnimations().forEach((a) => a.cancel());
     ring.animate(
       [
         { transform: `translate(${x}px, ${y}px) scale(0.15)`, opacity: 1 },
         { transform: `translate(${x}px, ${y}px) scale(1)`, opacity: 0 },
       ],
-      { duration: 1000, delay: delay + extra, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)', fill: 'both' },
+      { duration: 1000, delay: delay + i * 160, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)', fill: 'both' },
     );
-    setTimeout(() => ring.remove(), delay + extra + 1100);
-  }
+  });
 }
 
 // The list heading briefly types out who the PR is from, HUD style
@@ -919,6 +947,12 @@ async function start() {
     frameScale = Math.min(innerWidth / 1920, innerHeight / 1080);
     $('frame').style.transform = `scale(${frameScale})`;
     background.resize(frameScale);
+    if (!LITE) {
+      // Draw the reusable effect layers up front, not in the middle of a celebration
+      for (const c of [BLUE.line, PURPLE.line]) background.rippleSet(c);
+      shockSet(BLUE.line, 520);
+      shockSet(PURPLE.line, 300);
+    }
   };
   addEventListener('resize', fit);
   fit();
