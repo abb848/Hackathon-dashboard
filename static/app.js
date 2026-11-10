@@ -9,6 +9,7 @@ const SPOTLIGHT_MS = 4500;
 const TAGS_OUT_MS = 450; // matches tags-out in style.css
 const PULSE_AFTER_ENTER_MS = 300;
 const PULSE_MS = 900;
+const FEED_MS = 350;
 const BLUE = { line: '#4fc3f7', head: '#e1f5fe', light: 'rgba(79,195,247,0.32)' };
 const PURPLE = { line: '#a371f7', head: '#f1e8ff', light: 'rgba(163,113,247,0.32)' };
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -526,7 +527,7 @@ function digitsCentre(el) {
   return [(first.left + last.right) / 2, (first.top + first.bottom) / 2];
 }
 
-function pulse(points, colour, delay) {
+function pulse(points, colour, delay, duration = PULSE_MS, withLight = true) {
   const d = 'M' + points.map(([x, y]) => `${x} ${y}`).join(' L');
   let len = 0;
   for (let i = 1; i < points.length; i++) {
@@ -554,7 +555,7 @@ function pulse(points, colour, delay) {
   group.append(spark);
   $('pulses').append(group);
 
-  const timing = { duration: PULSE_MS, delay, easing: 'cubic-bezier(0.55, 0, 0.7, 1)', fill: 'both' };
+  const timing = { duration, delay, easing: 'cubic-bezier(0.55, 0, 0.7, 1)', fill: 'both' };
   trace.style.strokeDasharray = `${len} ${len}`;
   trace.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], timing);
   const HEAD = 80;
@@ -565,12 +566,14 @@ function pulse(points, colour, delay) {
   head.animate([{ opacity: 1 }, { opacity: 0.5 }, { opacity: 1 }], { duration: 90, iterations: Infinity });
   spark.animate(
     [{ transform: 'scale(0)', opacity: 1 }, { transform: 'scale(4)', opacity: 0 }],
-    { duration: 600, delay: delay + PULSE_MS * 0.95, easing: 'ease-out', fill: 'both' },
+    { duration: 600, delay: delay + duration * 0.95, easing: 'ease-out', fill: 'both' },
   );
   group.animate(
     [{ opacity: 1 }, { opacity: 1, offset: 0.65 }, { opacity: 0 }],
-    { duration: PULSE_MS + 900, delay, fill: 'both' },
+    { duration: duration + 900, delay, fill: 'both' },
   );
+  setTimeout(() => group.remove(), delay + duration + 1000);
+  if (!withLight) return;
 
   // A soft light rides along with the pulse head, lighting up whatever it passes
   const light = document.createElement('div');
@@ -585,9 +588,9 @@ function pulse(points, colour, delay) {
   light.animate(route, timing);
   light.animate(
     [{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }],
-    { duration: PULSE_MS + 300, delay, fill: 'both' },
+    { duration: duration + 300, delay, fill: 'both' },
   );
-  setTimeout(() => { group.remove(); light.remove(); }, delay + PULSE_MS + 1000);
+  setTimeout(() => light.remove(), delay + duration + 1000);
 }
 
 // Expanding hexagon rings from a point, like a shockwave. Drawn once, then only scaled and faded.
@@ -639,16 +642,23 @@ function announce(el, text, normal, cls, delay) {
   }, delay);
 }
 
-// Opened PRs travel up the left side into PRS OPENED. Returns when the pulse lands.
-function openedPulse(arrival) {
+// Opened PRs travel up the left side into PRS OPENED. Several new PRs share one pulse:
+// it starts at the lowest new row and the others send a short spark into the line.
+// Returns when the pulse lands.
+function openedPulse(arrivals) {
   const rows = frameRect($('latest'));
   const panel = frameRect($('panel-opened'));
-  const y = rows.top + arrival.slot * PITCH + ROW_H / 2;
+  const rowY = (a) => rows.top + a.slot * PITCH + ROW_H / 2;
+  const lowest = arrivals.reduce((m, a) => (a.slot > m.slot ? a : m));
+  const y = rowY(lowest);
   const py = (panel.top + panel.bottom) / 2;
   const gx = rows.left / 2;
-  const start = arrival.delay + PULSE_AFTER_ENTER_MS;
+  const start = Math.max(...arrivals.map((a) => a.delay)) + PULSE_AFTER_ENTER_MS;
   const land = start + PULSE_MS;
   pulse([[rows.left, y], [gx, y], [gx, py], [panel.left, py]], BLUE, start);
+  for (const a of arrivals) {
+    if (a !== lowest) pulse([[rows.left, rowY(a)], [gx, rowY(a)]], BLUE, start, FEED_MS, false);
+  }
   setTimeout(() => background.ripple(gx, y, BLUE.line, 0), start);
   setTimeout(() => {
     restartClass($('panel-opened'), 'hit');
@@ -657,6 +667,16 @@ function openedPulse(arrival) {
     shockwave(...digitsCentre($('n-opened')), BLUE.line, 520, 0);
   }, land);
   return land;
+}
+
+// New rows that arrive while a pulse is already on its way just spark into the line
+function openedFeeders(arrivals) {
+  const rows = frameRect($('latest'));
+  const gx = rows.left / 2;
+  for (const a of arrivals) {
+    const y = rows.top + a.slot * PITCH + ROW_H / 2;
+    pulse([[rows.left, y], [gx, y]], BLUE, a.delay + PULSE_AFTER_ENTER_MS, FEED_MS, false);
+  }
 }
 
 // Merged PRs travel up the right side into MERGED
@@ -786,6 +806,8 @@ let numbers;
 let latest;
 let merged;
 let milestoneByKey = new Map();
+let openedBusyUntil = 0;
+let mergedBusyUntil = 0;
 
 function apply(s) {
   const prev = current;
@@ -822,16 +844,31 @@ function apply(s) {
   };
 
   let landAt = 0;
-  // Arrivals are newest first, and the newest appears last
+  const now = Date.now();
+  // One pulse per update shared by all new PRs. If a pulse is still on its way,
+  // new rows just spark into the line and the number updates when it lands.
   if (animate && s.counts.opened > prev.counts.opened && newOpened.length) {
-    for (const a of newOpened) landAt = Math.max(landAt, openedPulse(a));
     const a = newOpened[0];
+    if (now >= openedBusyUntil) {
+      const t = openedPulse(newOpened);
+      openedBusyUntil = now + t;
+      landAt = Math.max(landAt, t);
+    } else {
+      openedFeeders(newOpened);
+      landAt = Math.max(landAt, openedBusyUntil - now);
+    }
     announce($('latest-title'), `NEW PR  ›  @${a.pr.author}  ›  ${a.pr.repo_name}`,
       'LATEST OPENED', 'announce-new', a.delay);
   }
   if (animate && s.counts.merged > prev.counts.merged && newMerged.length) {
-    for (const a of newMerged) landAt = Math.max(landAt, mergedPulse(a));
     const a = newMerged[0];
+    if (now >= mergedBusyUntil) {
+      const t = mergedPulse(a);
+      mergedBusyUntil = now + t;
+      landAt = Math.max(landAt, t);
+    } else {
+      landAt = Math.max(landAt, mergedBusyUntil - now);
+    }
     announce($('merged-title'), `MERGED  ›  @${a.pr.author}  ›  ${a.pr.repo_name}`,
       'JUST MERGED', 'announce-merged', a.delay);
   }
