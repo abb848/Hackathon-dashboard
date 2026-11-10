@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Assistant Hackathon</title>
+<link rel="icon" href="home-assistant-icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage"><div id="frame">
+<div class="dash">
+  <div id="bg" class="bg" aria-hidden="true"><div id="bg-world"></div></div>
+  <div id="confetti" class="confetti" aria-hidden="true"></div>
+
+  <header class="header">
+    <div class="brand">
+      <img class="brand-logo" src="home-assistant-icon.svg" width="44" height="44" alt="">
+      <div class="brand-text">
+        <div class="brand-title">Home Assistant Hackathon</div>
+        <div class="brand-sub" id="subtitle"></div>
+      </div>
+    </div>
+    <div class="divider" aria-hidden="true"></div>
+    <div class="label-cta">
+      <div class="label-cta-text">LABEL YOUR PRS</div>
+      <div class="label-name" id="label"></div>
+    </div>
+    <div class="divider" aria-hidden="true"></div>
+    <div class="status">
+      <div class="updated" id="updated">
+        <div class="updated-fill" id="updated-fill" aria-hidden="true"></div>
+        <span class="updated-text"><span id="updated-label">LAST UPDATED</span> <span class="updated-time" id="updated-time">--:--:--</span></span>
+      </div>
+      <div class="clock" id="clock">--:--</div>
+    </div>
+  </header>
+
+  <section class="numbers">
+    <div class="panel panel-main" id="panel-opened">
+      <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br-"></span>
+      <div class="panel-label">PRS OPENED</div>
+      <div class="num num-main" id="n-opened"></div>
+    </div>
+    <div class="side">
+      <div class="panel panel-small" id="panel-merged">
+        <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br-"></span>
+        <div class="panel-label small">MERGED</div>
+        <div class="num num-merged" id="n-merged"></div>
+      </div>
+      <div class="panel panel-small">
+        <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br-"></span>
+        <div class="panel-label small">READY TO REVIEW</div>
+        <div class="num num-ready" id="n-ready"></div>
+      </div>
+      <div class="panel panel-small">
+        <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br br-"></span>
+        <div class="panel-label small">WTH FIXES</div>
+        <div class="num num-wth" id="n-wth"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="milestone">
+    <div class="ms-head">
+      <span class="ms-left" id="ms-left">NEXT MILESTONE</span>
+      <span class="ms-right" id="ms-right"></span>
+    </div>
+    <div class="ms-track" id="ms-track"><div class="ms-fill" id="ms-fill"></div></div>
+  </section>
+
+  <section class="lists">
+    <div class="list-title" id="latest-title">LATEST OPENED</div>
+    <div class="rows rows-latest" id="latest"></div>
+    <div class="list-title merged-title" id="merged-title">JUST MERGED</div>
+    <div class="rows rows-merged" id="merged"></div>
+  </section>
+
+  <div class="overlay" id="lights" aria-hidden="true"></div>
+  <svg id="pulses" class="overlay" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
+</div>
+</div></div>
+<script src="app.js"></script>
+</body>
+</html>
