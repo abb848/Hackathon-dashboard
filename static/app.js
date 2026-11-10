@@ -325,28 +325,29 @@ class HexBackground {
     ctx.closePath();
   }
 
-  hexPoints(cx, cy, r) {
-    const pts = [];
-    for (let k = 0; k < 6; k++) {
-      const a = (Math.PI / 3) * k;
-      pts.push(`${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`);
-    }
-    return pts.join(' ');
-  }
-
-  // Hexagons around a point (in 1920x1080 frame coordinates) light up in a wave
+  // Hexagons around a point (in 1920x1080 frame coordinates) light up in a wave.
+  // Drawn once into a few rings, then only faded, so the Pi doesn't redraw it every frame.
   ripple(fx, fy, colour, delay) {
     const R = 300;
+    const BANDS = 3;
     const wx = fx + this.x;
     const wy = fy + this.y;
-    const svg = document.createElementNS(SVG_NS, 'svg');
-    svg.setAttribute('class', 'ripple');
-    svg.setAttribute('width', 2 * R);
-    svg.setAttribute('height', 2 * R);
-    svg.setAttribute('viewBox', `${wx - R} ${wy - R} ${2 * R} ${2 * R}`);
-    svg.style.left = `${wx - R}px`;
-    svg.style.top = `${wy - R}px`;
-    svg.style.color = colour;
+    const rings = [];
+    for (let b = 0; b < BANDS; b++) {
+      const canvas = document.createElement('canvas');
+      canvas.className = 'ripple';
+      canvas.width = canvas.height = Math.ceil(2 * R * this.pixelScale);
+      canvas.style.width = canvas.style.height = `${2 * R}px`;
+      canvas.style.left = `${wx - R}px`;
+      canvas.style.top = `${wy - R}px`;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(this.pixelScale, this.pixelScale);
+      ctx.translate(R - wx, R - wy);
+      ctx.fillStyle = colour;
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = 1.5;
+      rings.push({ canvas, ctx });
+    }
     const c0 = Math.floor((wx - R) / this.colStep);
     const c1 = Math.ceil((wx + R) / this.colStep);
     for (let c = c0; c <= c1; c++) {
@@ -358,15 +359,24 @@ class HexBackground {
         const cy = row * this.rowStep + offset;
         const dist = Math.hypot(cx - wx, cy - wy);
         if (dist > R) continue;
-        const hex = document.createElementNS(SVG_NS, 'polygon');
-        hex.setAttribute('points', this.hexPoints(cx, cy, this.r - 2));
-        hex.setAttribute('opacity', (1 - dist / R).toFixed(2));
-        hex.style.animationDelay = `${delay + dist * 1.6}ms`;
-        svg.append(hex);
+        const { ctx } = rings[Math.min(BANDS - 1, Math.floor(dist / (R / BANDS)))];
+        const strength = 1 - dist / R;
+        ctx.beginPath();
+        this.hexPath(ctx, cx, cy, this.r - 2);
+        ctx.globalAlpha = 0.16 * strength;
+        ctx.fill();
+        ctx.globalAlpha = 0.7 * strength;
+        ctx.stroke();
       }
     }
-    this.world.append(svg);
-    setTimeout(() => svg.remove(), delay + R * 1.6 + 1300);
+    rings.forEach(({ canvas }, b) => {
+      this.world.append(canvas);
+      canvas.animate(
+        [{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 0 }],
+        { duration: 1100, delay: delay + b * 160, easing: 'ease-out', fill: 'both' },
+      );
+    });
+    setTimeout(() => rings.forEach(({ canvas }) => canvas.remove()), delay + BANDS * 160 + 1200);
   }
 
   drawChunk(i, j) {
@@ -580,20 +590,24 @@ function pulse(points, colour, delay) {
   setTimeout(() => { group.remove(); light.remove(); }, delay + PULSE_MS + 1000);
 }
 
-// Expanding hexagon rings from a point, like a shockwave
+// Expanding hexagon rings from a point, like a shockwave. Drawn once, then only scaled and faded.
 function shockwave(x, y, colour, size, delay) {
+  const ps = frameScale * (window.devicePixelRatio || 1);
   for (const [extra, width] of [[0, 4], [160, 2]]) {
-    const ring = document.createElementNS(SVG_NS, 'svg');
-    ring.setAttribute('class', 'shock');
-    ring.setAttribute('viewBox', '-1.1 -1.1 2.2 2.2');
+    const ring = document.createElement('canvas');
+    ring.className = 'shock';
+    ring.width = ring.height = Math.ceil(size * ps);
     ring.style.width = ring.style.height = `${size}px`;
     ring.style.left = ring.style.top = `${-size / 2}px`;
-    ring.style.color = colour;
-    const hex = document.createElementNS(SVG_NS, 'polygon');
-    hex.setAttribute('points', '1,0 0.5,0.866 -0.5,0.866 -1,0 -0.5,-0.866 0.5,-0.866');
-    hex.style.stroke = colour;
-    hex.style.strokeWidth = `${width}px`;
-    ring.append(hex);
+    const ctx = ring.getContext('2d');
+    ctx.scale(ps, ps);
+    ctx.strokeStyle = colour;
+    ctx.shadowColor = colour;
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    background.hexPath(ctx, size / 2, size / 2, size / 2 - 14);
+    ctx.stroke();
     $('lights').append(ring);
     ring.animate(
       [
