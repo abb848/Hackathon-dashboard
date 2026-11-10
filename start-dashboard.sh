@@ -26,8 +26,18 @@ EOF
 fi
 
 if [ "$1" = "--stop" ]; then
-  pkill -f "python3 dashboard.py"
+  if pkill -f "python3 dashboard.py"; then
+    message="Hackathon dashboard stopped"
+  else
+    message="Hackathon dashboard wasn't running"
+  fi
   pkill -f -- "--start-fullscreen http://localhost:8080"
+  # Show a pop-up, as the stop icon has no window of its own
+  if command -v notify-send > /dev/null; then
+    notify-send "$message"
+  elif command -v zenity > /dev/null; then
+    zenity --info --text="$message" --timeout=4
+  fi
   exit 0
 fi
 
