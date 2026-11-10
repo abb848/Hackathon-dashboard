@@ -1,11 +1,10 @@
 #!/bin/bash
 # Starts the dashboard and opens it full screen in Chromium.
-# Run once with --install to put a launcher icon on the desktop.
+# Run once with --install to put start and stop icons on the desktop. --stop stops it.
 cd "$(dirname "$(readlink -f "$0")")" || exit 1
 
 if [ "$1" = "--install" ]; then
-  launcher="$HOME/Desktop/hackathon-dashboard.desktop"
-  cat > "$launcher" <<EOF
+  cat > "$HOME/Desktop/hackathon-dashboard.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Hackathon Dashboard
@@ -13,8 +12,22 @@ Exec=$PWD/start-dashboard.sh
 Icon=$PWD/static/home-assistant-icon.svg
 Terminal=false
 EOF
-  chmod +x "$launcher"
-  echo "Launcher added: $launcher"
+  cat > "$HOME/Desktop/hackathon-dashboard-stop.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Stop Hackathon Dashboard
+Exec=$PWD/start-dashboard.sh --stop
+Icon=process-stop
+Terminal=false
+EOF
+  chmod +x "$HOME/Desktop/hackathon-dashboard.desktop" "$HOME/Desktop/hackathon-dashboard-stop.desktop"
+  echo "Start and stop icons added to $HOME/Desktop"
+  exit 0
+fi
+
+if [ "$1" = "--stop" ]; then
+  pkill -f "python3 dashboard.py"
+  pkill -f -- "--start-fullscreen http://localhost:8080"
   exit 0
 fi
 

@@ -50,7 +50,7 @@ To start it with a double-click instead of a command, run this once in the proje
 ./start-dashboard.sh --install
 ```
 
-That puts a **Hackathon Dashboard** icon on the desktop. It starts the dashboard and opens it full screen in Chromium. Closing Chromium leaves the dashboard running, so the icon just reopens it. To stop it completely: `pkill -f dashboard.py`. Its output goes to `data/dashboard.log`.
+That puts **Hackathon Dashboard** and **Stop Hackathon Dashboard** icons on the desktop. Start opens the dashboard full screen in Chromium. Closing Chromium leaves the dashboard running, so the start icon just reopens it. The stop icon stops the dashboard and closes its Chromium window (same as `./start-dashboard.sh --stop`). Output goes to `data/dashboard.log`.
 
 If the desktop asks what to do with the file, choose **Execute**. If GitHub can't be reached it keeps the last numbers and recovers by itself.
 
