@@ -13,6 +13,8 @@ const FEED_MS = 350;
 const BLUE = { line: '#4fc3f7', head: '#e1f5fe', light: 'rgba(79,195,247,0.32)' };
 const PURPLE = { line: '#a371f7', head: '#f1e8ff', light: 'rgba(163,113,247,0.32)' };
 const SVG_NS = 'http://www.w3.org/2000/svg';
+// Open the page with ?lite to turn off the heaviest effects (ripples and shockwaves) on slow machines
+const LITE = new URLSearchParams(location.search).has('lite');
 // Primer octicon git-merge-16 (MIT)
 const MERGE_ICON = 'M5.45 5.154A4.25 4.25 0 0 0 9.25 7.5h1.378a2.251 2.251 0 1 1 0 1.5H9.25A5.734 5.734 0 0 1 5 7.123v3.505a2.25 2.25 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.95-.218ZM4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm8.5-4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM5 3.25a.75.75 0 1 0 0 .005V3.25Z';
 
@@ -329,6 +331,7 @@ class HexBackground {
   // Hexagons around a point (in 1920x1080 frame coordinates) light up in a wave.
   // Drawn once into a few rings, then only faded, so the Pi doesn't redraw it every frame.
   ripple(fx, fy, colour, delay) {
+    if (LITE) return;
     const R = 300;
     const BANDS = 3;
     const wx = fx + this.x;
@@ -595,6 +598,7 @@ function pulse(points, colour, delay, duration = PULSE_MS, withLight = true) {
 
 // Expanding hexagon rings from a point, like a shockwave. Drawn once, then only scaled and faded.
 function shockwave(x, y, colour, size, delay) {
+  if (LITE) return;
   const ps = frameScale * (window.devicePixelRatio || 1);
   for (const [extra, width] of [[0, 4], [160, 2]]) {
     const ring = document.createElement('canvas');
@@ -605,12 +609,15 @@ function shockwave(x, y, colour, size, delay) {
     const ctx = ring.getContext('2d');
     ctx.scale(ps, ps);
     ctx.strokeStyle = colour;
-    ctx.shadowColor = colour;
-    ctx.shadowBlur = 10;
-    ctx.lineWidth = width;
-    ctx.beginPath();
-    background.hexPath(ctx, size / 2, size / 2, size / 2 - 14);
-    ctx.stroke();
+    ctx.lineJoin = 'round';
+    // A wide faint stroke under a thin one gives a glow without a slow blur
+    for (const [w, alpha] of [[width * 4, 0.25], [width, 1]]) {
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = w;
+      ctx.beginPath();
+      background.hexPath(ctx, size / 2, size / 2, size / 2 - 14);
+      ctx.stroke();
+    }
     $('lights').append(ring);
     ring.animate(
       [
@@ -663,7 +670,6 @@ function openedPulse(arrivals) {
   setTimeout(() => {
     restartClass($('panel-opened'), 'hit');
     restartClass($('n-opened'), 'kick');
-    background.ripple(panel.left, py, BLUE.line, 0);
     shockwave(...digitsCentre($('n-opened')), BLUE.line, 520, 0);
   }, land);
   return land;
@@ -693,7 +699,6 @@ function mergedPulse(arrival) {
   setTimeout(() => {
     restartClass($('panel-merged'), 'pulse');
     restartClass($('n-merged'), 'kick');
-    background.ripple(panel.right, py, PURPLE.line, 0);
     shockwave(...digitsCentre($('n-merged')), PURPLE.line, 300, 0);
   }, land);
   return land;
