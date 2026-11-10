@@ -44,13 +44,13 @@ The dashboard checks GitHub every 60 seconds. If GitHub can't be reached it keep
 
 ### Effects
 
-By default the dashboard runs in a lighter mode made for the Pi: the hexagon ripples and shockwave rings are off, everything else plays. To turn them on, open it with `?full`:
+If the dashboard stutters on a slow machine, open it with `?lite` to turn off the heaviest effects (the hexagon ripples and shockwave rings). Everything else still plays:
 
 ```
-http://localhost:8080/?full
+http://localhost:8080/?lite
 ```
 
-On the Pi 5 the full effects made the page drop out when a PR landed, so only use `?full` on a faster machine (or once it's been tested on the Pi).
+The full effects run smoothly on a Pi 5 at 1080p. 4K hasn't been tested on the Pi yet, so 1080p output is the safe choice.
 
 ### Demo and replay
 
@@ -72,8 +72,9 @@ python -m unittest discover -s tests
 ## On the day
 
 - Run it on the Pi (or the laptop as a backup) and open it in the browser on that machine, full screen.
+- Set the Pi's screen output to 1080p, even on a 4K screen.
 - Check the Pi's clock is right once it's online.
-- If it stutters at 4K, set the screen output to 1080p or try Chromium.
+- If it stutters, try `?lite`.
 
 ## Data
 
