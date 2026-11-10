@@ -40,7 +40,19 @@ python dashboard.py
 
 Open http://localhost:8080 and press F11 for full screen. The terminal also prints an address for other devices on the same network. Stop with Ctrl+C.
 
-The dashboard checks GitHub every 20 seconds (`POLL_SECONDS`). If GitHub can't be reached it keeps the last numbers and recovers by itself.
+The dashboard checks GitHub every 20 seconds (`POLL_SECONDS`).
+
+### Desktop launcher (Pi)
+
+To start it with a double-click instead of a command, run this once in the project folder:
+
+```
+./start-dashboard.sh --install
+```
+
+That puts a **Hackathon Dashboard** icon on the desktop. It starts the dashboard and opens it full screen in Chromium. Closing Chromium leaves the dashboard running, so the icon just reopens it. To stop it completely: `pkill -f dashboard.py`. Its output goes to `data/dashboard.log`.
+
+If the desktop asks what to do with the file, choose **Execute**. If GitHub can't be reached it keeps the last numbers and recovers by itself.
 
 ### Effects
 
