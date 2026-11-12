@@ -38,6 +38,9 @@ WTH_LABEL = "WTH"
 START_TIME = "2026-11-19T09:00:00+01:00"  # PRs created before this are ignored
 ORGS = ["home-assistant"]
 EVENT_LOCATION = "THE HAGUE"
+# Shown in the header when set; leave empty to hide
+WIFI_NAME = ""
+WIFI_PASSWORD = ""
 MILESTONES = [10, 25, 50, 100]
 POLL_SECONDS = 20  # each check is one GitHub search per 100 PRs; the limit is 30 searches a minute
 PORT = 8080
@@ -157,7 +160,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path.split("?", 1)[0] == "/api/state":
             state = self.source.state()
-            state.update(label=HACKATHON_LABEL, subtitle=EVENT_SUBTITLE, server_time=int(time.time() * 1000))
+            state.update(label=HACKATHON_LABEL, subtitle=EVENT_SUBTITLE, server_time=int(time.time() * 1000),
+                         wifi={"name": WIFI_NAME, "password": WIFI_PASSWORD} if WIFI_NAME else None)
             body = json.dumps(state).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")

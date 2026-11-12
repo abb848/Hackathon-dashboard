@@ -69,6 +69,9 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: #000; }
 .brand-text { display: flex; flex-direction: column; gap: 4px; }
 .brand-title { font-family: var(--display); font-size: 28px; font-weight: 700; letter-spacing: 0.02em; }
 .brand-sub { font-family: var(--mono); font-size: 18px; color: var(--muted); letter-spacing: 0.08em; }
+.brand-wifi { font-family: var(--mono); font-size: 16px; color: var(--muted); letter-spacing: 0.08em; white-space: pre; }
+.brand-wifi[hidden] { display: none; }
+.brand-wifi span { color: var(--text); }
 .divider { flex: none; width: 4px; height: 76px; background: rgba(79,195,247,0.55); transform: skewX(-20deg); }
 .label-cta { flex: 1; display: flex; align-items: center; justify-content: center; gap: 24px; min-width: 0; }
 .label-cta-text { font-family: var(--mono); font-size: 20px; color: var(--muted); letter-spacing: 0.14em; white-space: nowrap; }

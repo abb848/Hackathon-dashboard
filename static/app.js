@@ -817,6 +817,17 @@ let fillCycle = null;
 function updateHeader(s) {
   $('label').textContent = s.label;
   $('subtitle').textContent = s.subtitle;
+  const wifi = $('wifi');
+  wifi.hidden = !s.wifi;
+  if (s.wifi) {
+    const value = (text) => {
+      const el = document.createElement('span');
+      el.textContent = text;
+      return el;
+    };
+    wifi.replaceChildren('WI-FI  ', value(s.wifi.name));
+    if (s.wifi.password) wifi.append('  ·  PASSWORD  ', value(s.wifi.password));
+  }
   $('updated-label').textContent = s.mode === 'replay' ? 'REPLAY' : 'LAST UPDATED';
   $('updated-time').textContent = s.last_updated ? hhmmss(s.last_updated) : '--:--:--';
   $('updated').classList.toggle('stale', !s.ok);

@@ -28,6 +28,7 @@ At the top of `dashboard.py`:
 | `START_TIME` | PRs created before this are ignored. Change this for the next hackathon |
 | `ORGS` | GitHub org(s) to search |
 | `EVENT_LOCATION` | Shown in the header, with the date taken from `START_TIME` |
+| `WIFI_NAME`, `WIFI_PASSWORD` | Wi-Fi details shown in the header. Leave `WIFI_NAME` empty to hide them |
 | `WTH_LABEL` | Label for WTH fixes |
 | `MILESTONES` | PR counts that trigger a celebration |
 | `DEMO_MODE` | `True` makes plain `python dashboard.py` run the demo |
